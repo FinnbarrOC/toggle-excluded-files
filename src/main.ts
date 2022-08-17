@@ -2,23 +2,23 @@ import {Notice, Plugin} from 'obsidian';
 import {DEFAULT_SETTINGS, Settings, ToggleExcludedFilesSettingTab} from "./settings/settings";
 import {StatusBar} from "./statusBar";
 import {changePathVisibility} from "./changePathVisibility";
-import * as path from "path";
+import {RibbonIcon} from "./ribbonIcon";
 
 export default class ToggleExcludedFilesPlugin extends Plugin {
 	settings: Settings;
 	statusBar: StatusBar;
+	ribbonIcon: RibbonIcon;
 
 	async onload() {
-		await this.loadSettings();
-
-		this.addSettingTab(new ToggleExcludedFilesSettingTab(this.app, this));
-
-		// TODO: add ribbon icon
-
-		// Initialize Status Bar
 		let statusBarEl = this.addStatusBarItem();
 		this.statusBar = new StatusBar(statusBarEl, this);
-		this.statusBar.display(this.settings.isToggleOn);
+
+		let ribbonIconEl = this.addRibbonIcon("", "", () => null);
+		this.ribbonIcon = new RibbonIcon(ribbonIconEl, this);
+
+		await this.loadSettings();  // Load after UI elements so they are ready to display proper settings
+
+		this.addSettingTab(new ToggleExcludedFilesSettingTab(this.app, this));
 	}
 
 	onunload() {
@@ -51,6 +51,7 @@ export default class ToggleExcludedFilesPlugin extends Plugin {
 		await this.refreshWorkspace();
 		new Notice('Excluded Files Now ' + (this.settings.isToggleOn ? 'Hidden' : 'Visible'));
 		this.statusBar?.display(this.settings.isToggleOn);
+		this.ribbonIcon?.display(this.settings.isToggleOn);
 	}
 
 	// TODO: this doesn't work when called through loadSettings, probably happening too early
@@ -62,7 +63,7 @@ export default class ToggleExcludedFilesPlugin extends Plugin {
 	}
 
 	async modifyUserIgnoreFilters() {
-		let appJsonPath = path.join(this.app.vault.configDir, "app.json");
+		let appJsonPath = this.app.vault.configDir + '/' + "app.json";  // (node.js path module doesn't work on mobile)
 
 		let text = await this.app.vault.adapter.read(appJsonPath);
 		let appJson: AppJson = JSON.parse(text);
